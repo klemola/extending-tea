@@ -1,0 +1,28 @@
+{
+  "name": "extending-tea",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/mockServer.js",
+  "engines": {
+    "node": ">=6.0.0",
+    "npm": ">=3.0.0"
+  },
+  "scripts": {
+    "build": "mkdir -p dist && elm-make src/Main.elm --output=dist/index.html",
+    "start": "npm run build && node src/mockServer.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/klemola/extending-tea.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/klemola/extending-tea/issues"
+  },
+  "homepage": "https://github.com/klemola/extending-tea#readme",
+  "dependencies": {
+    "body-parser": "^1.15.2",
+    "cookie-parser": "^1.4.3",
+    "express": "^4.14.0"
+  }
+}

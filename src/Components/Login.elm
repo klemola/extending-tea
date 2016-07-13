@@ -2,9 +2,13 @@ module Components.Login exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
-import Html.Attributes exposing (type', placeholder)
+import Html.Attributes exposing (type', placeholder, style)
+import HttpBuilder exposing (Error)
+import Task exposing (Task)
+import Api
 import Types.Context as Context exposing (Context, ContextUpdate)
-import Types.User exposing (User)
+import Types.User as User exposing (User)
+import Types.Credentials as Credentials exposing (Credentials)
 
 
 type Msg
@@ -42,7 +46,14 @@ update msg model =
             ( { model | password = password }, Cmd.none, Nothing )
 
         Login ->
-            ( model, Cmd.none, Nothing )
+            let
+                credentials =
+                    Credentials model.userName model.password
+            in
+                ( model
+                , Task.perform (\_ -> HandleFailure) HandleResponse (login credentials)
+                , Nothing
+                )
 
         HandleResponse user ->
             ( fst init, snd init, Just (Context.SetCurrentUser user) )
@@ -51,10 +62,19 @@ update msg model =
             ( { model | errorMessage = Just "Login failed" }, Cmd.none, Nothing )
 
 
+login : Credentials -> Task (Error String) User
+login credentials =
+    Credentials.encode credentials
+        |> Api.post User.decoder "/api/login"
+        |> Task.map .data
+
+
 view : Model -> Html Msg
 view model =
     div []
-        [ p [] [ text "Username is \"mycupoftea\" and password is \"hunter2\"" ]
+        [ p [ style [ ( "color", "red" ) ] ]
+            [ text (Maybe.withDefault "" model.errorMessage) ]
+        , p [] [ text "Username is \"mycupoftea\" and password is \"hunter2\"" ]
         , div [] (loginForm model)
         ]
 
