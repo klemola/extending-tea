@@ -1,9 +1,9 @@
-module Api exposing (post)
+module Api exposing (post, messageDecoder, emptyValue)
 
 import HttpBuilder exposing (..)
 import Task exposing (Task)
 import Json.Decode exposing (Decoder, (:=), string, object1)
-import Json.Encode exposing (Value)
+import Json.Encode as JsonEncode exposing (Value)
 
 
 apiCall : (String -> RequestBuilder) -> Decoder error -> Decoder success -> String -> Value -> Task (Error error) (Response success)
@@ -24,3 +24,14 @@ errorDecoder : Decoder String
 errorDecoder =
     object1 identity
         ("error" := string)
+
+
+messageDecoder : Decoder String
+messageDecoder =
+    object1 identity
+        ("message" := string)
+
+
+emptyValue : Value
+emptyValue =
+    JsonEncode.object []

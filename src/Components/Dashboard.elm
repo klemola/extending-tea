@@ -3,7 +3,10 @@ module Components.Dashboard exposing (Model, Msg, init, update, view)
 import Html exposing (..)
 import Html.App as App
 import Html.Events exposing (onClick)
-import Types.Context exposing (Context, ContextUpdate)
+import HttpBuilder exposing (Error)
+import Task exposing (Task)
+import Api
+import Types.Context as Context exposing (Context, ContextUpdate)
 import Components.EditProfile as EditProfile
 
 
@@ -15,6 +18,8 @@ type View
 type Msg
     = SwitchView View
     | Logout
+    | HandleLogoutResponse String
+    | NoOp
     | EditProfileMsg EditProfile.Msg
 
 
@@ -44,6 +49,15 @@ update context msg model =
             ( { model | activeView = view }, Cmd.none, Nothing )
 
         Logout ->
+            ( model
+            , Task.perform (\_ -> NoOp) HandleLogoutResponse logout
+            , Nothing
+            )
+
+        HandleLogoutResponse _ ->
+            ( fst init, snd init, Just Context.LogOut )
+
+        NoOp ->
             ( model, Cmd.none, Nothing )
 
         EditProfileMsg editProfileMsg ->
@@ -52,6 +66,13 @@ update context msg model =
                     EditProfile.update context editProfileMsg model.editProfileModel
             in
                 ( { model | editProfileModel = editProfileModel }, Cmd.none, Nothing )
+
+
+logout : Task (Error String) String
+logout =
+    Api.emptyValue
+        |> Api.post Api.messageDecoder "/api/logout"
+        |> Task.map .data
 
 
 view : Context -> Model -> Html Msg

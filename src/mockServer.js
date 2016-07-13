@@ -26,6 +26,10 @@ ApiRouter.post('/login', (req, res) => {
   }
 });
 
+ApiRouter.post('/logout', (req, res) => {
+  res.json({ message: 'Session terminated '});
+});
+
 app.use(BodyParser.json());
 app.use(CookieParser());
 app.use('/', Express.static('dist'));
