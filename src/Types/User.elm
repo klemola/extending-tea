@@ -1,10 +1,11 @@
 module Types.User exposing (User, decoder)
 
-import Json.Decode exposing (Decoder, (:=), int, string, object5)
+import Json.Decode exposing (Decoder, (:=), int, string, object6)
 
 
 type alias User =
-    { firstName : String
+    { id : String
+    , firstName : String
     , lastName : String
     , username : String
     , profilePicture : String
@@ -14,7 +15,8 @@ type alias User =
 
 decoder : Decoder User
 decoder =
-    object5 User
+    object6 User
+        ("id" := string)
         ("firstName" := string)
         ("lastName" := string)
         ("userName" := string)

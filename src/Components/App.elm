@@ -2,18 +2,22 @@ module Components.App exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
 import Html.Attributes exposing (style)
-import Task
 import Html.App
+import Task exposing (Task)
+import HttpBuilder exposing (Error)
+import Api
 import Components.Dashboard as Dashboard
 import Components.Login as Login
-import Types.Context exposing (Context, ContextUpdate(..))
+import Types.User as User exposing (User)
+import Types.Context as Context exposing (Context, ContextUpdate(..))
 
 
 type Msg
     = UpdateContext ContextUpdate
+    | SetUser User
+    | HandleFailure
     | LoginMsg Login.Msg
     | DashboardMsg Dashboard.Msg
-    | Fail
 
 
 type alias Model =
@@ -33,7 +37,10 @@ init =
           , dashboardModel = Nothing
           , loginModel = loginModel
           }
-        , Cmd.map LoginMsg loginCmd
+        , Cmd.batch
+            [ Task.perform (\_ -> HandleFailure) SetUser authenticateUser
+            , Cmd.map LoginMsg loginCmd
+            ]
         )
 
 
@@ -42,6 +49,12 @@ update msg model =
     case msg of
         UpdateContext contextUpdate ->
             updateContext model contextUpdate
+
+        SetUser user ->
+            updateContext model (Context.SetCurrentUser user)
+
+        HandleFailure ->
+            model ! []
 
         LoginMsg msg ->
             let
@@ -60,8 +73,11 @@ update msg model =
                 |> Maybe.map2 (updateDashboard model msg) model.dashboardModel
                 |> Maybe.withDefault ( model, Cmd.none )
 
-        Fail ->
-            model ! []
+
+authenticateUser : Task (Error String) User
+authenticateUser =
+    Api.get User.decoder "/api/me"
+        |> Task.map .data
 
 
 maybeUpdateContext : Maybe ContextUpdate -> Cmd Msg
@@ -69,7 +85,7 @@ maybeUpdateContext contextUpdate =
     case contextUpdate of
         Just update ->
             Task.succeed ()
-                |> Task.perform (\_ -> Fail) (\_ -> UpdateContext update)
+                |> Task.perform (\_ -> HandleFailure) (\_ -> UpdateContext update)
 
         Nothing ->
             Cmd.none
