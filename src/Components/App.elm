@@ -15,13 +15,15 @@ import Types.Context as Context exposing (Context, ContextUpdate(..))
 type Msg
     = UpdateContext ContextUpdate
     | SetUser User
-    | HandleFailure
+    | Unauthorized
+    | ContextUpdateFailure
     | LoginMsg Login.Msg
     | DashboardMsg Dashboard.Msg
 
 
 type alias Model =
     { context : Maybe Context
+    , appReady : Bool
     , loginModel : Login.Model
     , dashboardModel : Maybe Dashboard.Model
     }
@@ -34,11 +36,12 @@ init =
             Login.init
     in
         ( { context = Nothing
+          , appReady = False
           , dashboardModel = Nothing
           , loginModel = loginModel
           }
         , Cmd.batch
-            [ Task.perform (\_ -> HandleFailure) SetUser authenticateUser
+            [ Task.perform (\_ -> Unauthorized) SetUser authenticateUser
             , Cmd.map LoginMsg loginCmd
             ]
         )
@@ -53,7 +56,10 @@ update msg model =
         SetUser user ->
             updateContext model (Context.SetCurrentUser user)
 
-        HandleFailure ->
+        Unauthorized ->
+            { model | appReady = True } ! []
+
+        ContextUpdateFailure ->
             model ! []
 
         LoginMsg msg ->
@@ -85,7 +91,7 @@ maybeUpdateContext contextUpdate =
     case contextUpdate of
         Just update ->
             Task.succeed ()
-                |> Task.perform (\_ -> HandleFailure) (\_ -> UpdateContext update)
+                |> Task.perform (\_ -> ContextUpdateFailure) (\_ -> UpdateContext update)
 
         Nothing ->
             Cmd.none
@@ -118,6 +124,7 @@ updateContext model contextUpdate =
             in
                 ( { model
                     | context = Just context
+                    , appReady = True
                     , dashboardModel = Just dashboardModel
                   }
                 , Cmd.map DashboardMsg dashboardCmd
@@ -129,10 +136,17 @@ updateContext model contextUpdate =
 
 view : Model -> Html Msg
 view model =
-    div [ style [ ( "padding", "0 2rem" ) ] ]
-        [ h1 [] [ text "Extending TEA" ]
-        , activeView model
-        ]
+    let
+        content =
+            if model.appReady == True then
+                activeView model
+            else
+                text "Loading..."
+    in
+        div [ style [ ( "padding", "1rem 2rem" ) ] ]
+            [ h1 [] [ text "Extending TEA" ]
+            , content
+            ]
 
 
 activeView : Model -> Html Msg
