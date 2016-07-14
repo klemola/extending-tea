@@ -1,12 +1,14 @@
 module Components.Dashboard exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
+import Html.Attributes exposing (src)
 import Html.App as App
 import Html.Events exposing (onClick)
 import HttpBuilder exposing (Error)
 import Task exposing (Task)
 import Api
 import Types.Context as Context exposing (Context, ContextUpdate)
+import Types.User as User exposing (User)
 import Components.EditProfile as EditProfile
 
 
@@ -29,11 +31,11 @@ type alias Model =
     }
 
 
-init : ( Model, Cmd Msg )
-init =
+init : Context -> ( Model, Cmd Msg )
+init context =
     let
         ( editProfileModel, editProfileCmd ) =
-            EditProfile.init
+            EditProfile.init context
     in
         ( { activeView = ShowProfileView
           , editProfileModel = editProfileModel
@@ -55,17 +57,24 @@ update context msg model =
             )
 
         HandleLogoutResponse _ ->
-            ( fst init, snd init, Just Context.LogOut )
+            let
+                ( initialModel, intialCmd ) =
+                    init context
+            in
+                ( initialModel, intialCmd, Just Context.LogOut )
 
         NoOp ->
             ( model, Cmd.none, Nothing )
 
         EditProfileMsg editProfileMsg ->
             let
-                ( editProfileModel, editProfileCmd, _ ) =
-                    EditProfile.update context editProfileMsg model.editProfileModel
+                ( editProfileModel, editProfileCmd, maybeContextUpdate ) =
+                    EditProfile.update editProfileMsg model.editProfileModel
             in
-                ( { model | editProfileModel = editProfileModel }, Cmd.none, Nothing )
+                ( { model | editProfileModel = editProfileModel }
+                , Cmd.map EditProfileMsg editProfileCmd
+                , maybeContextUpdate
+                )
 
 
 logout : Task (Error String) String
@@ -96,15 +105,23 @@ activeView : Context -> Model -> Html Msg
 activeView context model =
     case model.activeView of
         EditProfileView ->
-            App.map EditProfileMsg (EditProfile.view context model.editProfileModel)
+            App.map EditProfileMsg (EditProfile.view model.editProfileModel)
 
         ShowProfileView ->
-            showProfileView context
+            showProfileView context.currentUser
 
 
-showProfileView : Context -> Html Msg
-showProfileView context =
+showProfileView : User -> Html Msg
+showProfileView user =
     div []
-        [ h1 [] [ text "Profile" ]
-        , text context.currentUser.firstName
+        [ h2 []
+            [ text "Profile" ]
+        , p []
+            [ text (user.firstName ++ " " ++ user.lastName) ]
+        , p []
+            [ text ("Username: " ++ user.username) ]
+        , p []
+            [ text ("Age: " ++ (toString user.age)) ]
+        , div []
+            [ img [ src user.profilePicture ] [] ]
         ]

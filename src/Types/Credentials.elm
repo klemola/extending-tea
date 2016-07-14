@@ -4,7 +4,7 @@ import Json.Encode as JsonEncode exposing (Value, object, string)
 
 
 type alias Credentials =
-    { userName : String
+    { username : String
     , password : String
     }
 
@@ -12,6 +12,6 @@ type alias Credentials =
 encode : Credentials -> Value
 encode credentials =
     object
-        [ ( "userName", string credentials.userName )
+        [ ( "username", string credentials.username )
         , ( "password", string credentials.password )
         ]

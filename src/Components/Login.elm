@@ -20,7 +20,7 @@ type Msg
 
 
 type alias Model =
-    { userName : String
+    { username : String
     , password : String
     , errorMessage : Maybe String
     }
@@ -28,7 +28,7 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { userName = ""
+    ( { username = ""
       , password = ""
       , errorMessage = Nothing
       }
@@ -39,8 +39,8 @@ init =
 update : Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
 update msg model =
     case msg of
-        SetUserName userName ->
-            ( { model | userName = userName }, Cmd.none, Nothing )
+        SetUserName username ->
+            ( { model | username = username }, Cmd.none, Nothing )
 
         SetPassword password ->
             ( { model | password = password }, Cmd.none, Nothing )
@@ -48,7 +48,7 @@ update msg model =
         Login ->
             let
                 credentials =
-                    Credentials model.userName model.password
+                    Credentials model.username model.password
             in
                 ( model
                 , Task.perform (\_ -> HandleFailure) HandleResponse (login credentials)

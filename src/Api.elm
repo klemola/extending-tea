@@ -1,4 +1,4 @@
-module Api exposing (post, get, messageDecoder, emptyValue)
+module Api exposing (post, get, put, messageDecoder, emptyValue)
 
 import HttpBuilder exposing (..)
 import Task exposing (Task)
@@ -10,6 +10,15 @@ post : Decoder success -> String -> Value -> Task (Error String) (Response succe
 post successDecoder url body =
     url
         |> HttpBuilder.post
+        |> withHeader "content-type" "application/json"
+        |> withJsonBody body
+        |> send (jsonReader successDecoder) (jsonReader errorDecoder)
+
+
+put : Decoder success -> String -> Value -> Task (Error String) (Response success)
+put successDecoder url body =
+    url
+        |> HttpBuilder.put
         |> withHeader "content-type" "application/json"
         |> withJsonBody body
         |> send (jsonReader successDecoder) (jsonReader errorDecoder)

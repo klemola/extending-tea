@@ -1,6 +1,7 @@
-module Types.User exposing (User, decoder)
+module Types.User exposing (User, encode, decoder)
 
-import Json.Decode exposing (Decoder, (:=), int, string, object6)
+import Json.Decode as JsonDecode exposing (Decoder, (:=))
+import Json.Encode as JsonEncode exposing (Value)
 
 
 type alias User =
@@ -13,12 +14,24 @@ type alias User =
     }
 
 
+encode : User -> Value
+encode user =
+    JsonEncode.object
+        [ ( "id", JsonEncode.string user.id )
+        , ( "firstName", JsonEncode.string user.firstName )
+        , ( "lastName", JsonEncode.string user.lastName )
+        , ( "username", JsonEncode.string user.username )
+        , ( "profilePicture", JsonEncode.string user.profilePicture )
+        , ( "age", JsonEncode.int user.age )
+        ]
+
+
 decoder : Decoder User
 decoder =
-    object6 User
-        ("id" := string)
-        ("firstName" := string)
-        ("lastName" := string)
-        ("userName" := string)
-        ("profilePicture" := string)
-        ("age" := int)
+    JsonDecode.object6 User
+        ("id" := JsonDecode.string)
+        ("firstName" := JsonDecode.string)
+        ("lastName" := JsonDecode.string)
+        ("username" := JsonDecode.string)
+        ("profilePicture" := JsonDecode.string)
+        ("age" := JsonDecode.int)

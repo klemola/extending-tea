@@ -22,11 +22,11 @@ const sessionConfig = {
   genid: Uuid.v4,
 };
 
-const userData = {
+let userData = {
   id: Uuid.v4(),
   firstName: 'Eric',
   lastName: 'Example',
-  userName: 'mycupoftea',
+  username: 'mycupoftea',
   profilePicture: 'http://placekitten.com/400/400',
   age: 30,
 };
@@ -35,7 +35,7 @@ const sessions = {};
 
 function isValid(credentials) {
   return !!credentials
-    && credentials.userName === 'mycupoftea'
+    && credentials.username === 'mycupoftea'
     && credentials.password === 'hunter2';
 }
 
@@ -80,6 +80,19 @@ ApiRouter.get('/me', validateSession, (req, res) => {
   }
 
   return invalidSessionResponse(res);
+});
+
+ApiRouter.put('/update', validateSession, (req, res) => {
+  const update = req.body;
+  console.log(update);
+  if (!update) {
+    return res
+      .status(400)
+      .json( {error: 'Invalid request body'} );
+  }
+
+  userData = update;
+  return res.json(update);
 });
 
 app.use(Session(sessionConfig));

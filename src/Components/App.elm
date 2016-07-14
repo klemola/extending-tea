@@ -120,7 +120,7 @@ updateContext model contextUpdate =
                     { currentUser = user }
 
                 ( dashboardModel, dashboardCmd ) =
-                    Dashboard.init
+                    Dashboard.init context
             in
                 ( { model
                     | context = Just context
