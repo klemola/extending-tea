@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "summary": "Example of an The Elm Architecture extension",
+    "summary": "An example of extension to The Elm Architecture",
     "repository": "https://github.com/user/project.git",
     "license": "MIT",
     "source-directories": [
