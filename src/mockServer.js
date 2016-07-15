@@ -42,7 +42,9 @@ function isValid(credentials) {
 function invalidSessionResponse(res) {
   return res
     .status(401)
-    .json({ error: 'Invalid session' });
+    .json({
+      error: 'Invalid session'
+    });
 }
 
 function validateSession(req, res, next) {
@@ -61,7 +63,9 @@ ApiRouter.post('/login', (req, res) => {
 
   return res
     .status(400)
-    .json({ error: 'Invalid username or password' });
+    .json({
+      error: 'Invalid username or password'
+    });
 });
 
 ApiRouter.post('/logout', (req, res) => {
@@ -69,13 +73,15 @@ ApiRouter.post('/logout', (req, res) => {
     sessions[req.session.id] = null;
   }
 
-  return res.json({ message: 'Session terminated '});
+  return res.json({
+    message: 'Session terminated'
+  });
 });
 
 ApiRouter.get('/me', validateSession, (req, res) => {
   const userId = req.session ? sessions[req.session.id] : null;
 
-  if (userId)  {
+  if (userId) {
     return res.json(userData);
   }
 
@@ -84,11 +90,12 @@ ApiRouter.get('/me', validateSession, (req, res) => {
 
 ApiRouter.put('/update', validateSession, (req, res) => {
   const update = req.body;
-  console.log(update);
   if (!update) {
     return res
       .status(400)
-      .json( {error: 'Invalid request body'} );
+      .json({
+        error: 'Invalid request body'
+      });
   }
 
   userData = update;
