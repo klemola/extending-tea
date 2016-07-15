@@ -1,4 +1,4 @@
-module Components.Dashboard exposing (Model, Msg, init, update, view)
+module Components.Dashboard exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (src)
@@ -18,7 +18,8 @@ type View
 
 
 type Msg
-    = SwitchView View
+    = ContextUpdate
+    | SwitchView View
     | Logout
     | HandleLogoutResponse String
     | NoOp
@@ -47,6 +48,9 @@ init context =
 update : Context -> Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
 update context msg model =
     case msg of
+        ContextUpdate ->
+            contextUpdate context model
+
         SwitchView view ->
             ( { model | activeView = view }, Cmd.none, Nothing )
 
@@ -69,12 +73,27 @@ update context msg model =
         EditProfileMsg editProfileMsg ->
             let
                 ( editProfileModel, editProfileCmd, maybeContextUpdate ) =
-                    EditProfile.update editProfileMsg model.editProfileModel
+                    EditProfile.update context editProfileMsg model.editProfileModel
             in
                 ( { model | editProfileModel = editProfileModel }
                 , Cmd.map EditProfileMsg editProfileCmd
                 , maybeContextUpdate
                 )
+
+
+contextUpdate : Context -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
+contextUpdate context model =
+    let
+        ( editProfileModel, editProfileCmd, _ ) =
+            EditProfile.update context EditProfile.ContextUpdate model.editProfileModel
+    in
+        ( { model
+            | editProfileModel = editProfileModel
+            , activeView = ShowProfileView
+          }
+        , Cmd.map EditProfileMsg editProfileCmd
+        , Nothing
+        )
 
 
 logout : Task (Error String) String

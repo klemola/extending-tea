@@ -119,8 +119,16 @@ updateContext model contextUpdate =
                 context =
                     { currentUser = user }
 
-                ( dashboardModel, dashboardCmd ) =
-                    Dashboard.init context
+                updateDashboard currentModel _ =
+                    Dashboard.update context Dashboard.ContextUpdate currentModel
+
+                initWithCtxUpdate initValues update =
+                    ( fst initValues, snd initValues, update )
+
+                ( dashboardModel, dashboardCmd, ctxUpdate ) =
+                    model.context
+                        |> Maybe.map2 updateDashboard model.dashboardModel
+                        |> Maybe.withDefault (initWithCtxUpdate (Dashboard.init context) ctxUpdate)
             in
                 ( { model
                     | context = Just context

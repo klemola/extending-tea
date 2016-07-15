@@ -1,4 +1,4 @@
-module Components.EditProfile exposing (Model, Msg, init, update, view)
+module Components.EditProfile exposing (..)
 
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
@@ -12,7 +12,8 @@ import Types.User as User exposing (User)
 
 
 type Msg
-    = Input FormUpdate
+    = ContextUpdate
+    | Input FormUpdate
     | Submit
     | HandleResponse User
     | HandleFailure
@@ -39,9 +40,15 @@ init context =
     )
 
 
-update : Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
-update msg model =
+update : Context -> Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
+update context msg model =
     case msg of
+        ContextUpdate ->
+            ( { model | profileEdit = context.currentUser }
+            , Cmd.none
+            , Nothing
+            )
+
         Input formUpdate ->
             ( { model | profileEdit = updateUser model.profileEdit formUpdate }
             , Cmd.none
