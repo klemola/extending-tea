@@ -1,5 +1,11 @@
 # An example of extension to The Elm Architecture
 
+## Update
+
+I've had a chance to revise the core idea with Ossi. We improved the implementation, and you can see the results here: [ohanhi/elm-taco](https://github.com/ohanhi/elm-taco)
+
+This example is still relevant in the sense that we use different data in `elm-taco`. User state handling, back-end server and sessions are unique to this repository. I'm going to update the codebase to Elm 0.18 as soon as possible.
+
 ### Jump to...
 - **[About](#about)**
  - **[TEA extensions](#tea-extensions)**
