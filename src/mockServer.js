@@ -90,11 +90,11 @@ ApiRouter.get('/me', validateSession, (req, res) => {
 
 ApiRouter.put('/update', validateSession, (req, res) => {
   const update = req.body;
-  if (!update) {
+  if (!update || !update.firstName || !update.lastName) {
     return res
       .status(400)
       .json({
-        error: 'Invalid request body'
+        error: 'Invalid user information'
       });
   }
 

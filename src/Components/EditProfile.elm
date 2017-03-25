@@ -2,21 +2,21 @@ module Components.EditProfile exposing (..)
 
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
-import Html.Attributes exposing (type', value, style)
+import Html.Attributes exposing (type_, value, style)
 import String
-import HttpBuilder exposing (Error)
-import Task exposing (Task)
-import Api
-import Types.Context as Context exposing (Context, ContextUpdate)
-import Types.User as User exposing (User)
+import RemoteData exposing (RemoteData(..), WebData)
+import RemoteData.Http exposing (put)
+import Types exposing (Context, ContextUpdate(..), User)
+import Encoders exposing (encodeUser)
+import Decoders exposing (userDecoder)
+import Helpers exposing (errorMessageView)
 
 
 type Msg
     = ContextUpdate
     | Input FormUpdate
     | Submit
-    | HandleResponse User
-    | HandleFailure
+    | HandleResponse (WebData User)
 
 
 type FormUpdate
@@ -27,14 +27,14 @@ type FormUpdate
 
 type alias Model =
     { profileEdit : User
-    , errorMessage : Maybe String
+    , userResponse : WebData User
     }
 
 
 init : Context -> ( Model, Cmd Msg )
 init context =
     ( { profileEdit = context.currentUser
-      , errorMessage = Nothing
+      , userResponse = NotAsked
       }
     , Cmd.none
     )
@@ -57,25 +57,32 @@ update context msg model =
 
         Submit ->
             ( model
-            , Task.perform (\_ -> HandleFailure) HandleResponse (submit model.profileEdit)
+            , submit model.profileEdit
             , Nothing
             )
 
-        HandleResponse user ->
-            ( { model | errorMessage = Nothing }
-            , Cmd.none
-            , Just (Context.SetCurrentUser user)
-            )
+        HandleResponse webData ->
+            let
+                updatedModel =
+                    { model | userResponse = webData }
+            in
+                case webData of
+                    Success user ->
+                        ( updatedModel
+                        , Cmd.none
+                        , Just (SetCurrentUser user)
+                        )
 
-        HandleFailure ->
-            ( { model | errorMessage = Just "Something went wrong" }, Cmd.none, Nothing )
+                    _ ->
+                        ( updatedModel
+                        , Cmd.none
+                        , Nothing
+                        )
 
 
-submit : User -> Task (Error String) User
+submit : User -> Cmd Msg
 submit user =
-    User.encode user
-        |> Api.put User.decoder "/api/update"
-        |> Task.map .data
+    put "/api/update" HandleResponse userDecoder (encodeUser user)
 
 
 updateUser : User -> FormUpdate -> User
@@ -95,8 +102,7 @@ view : Model -> Html Msg
 view model =
     div []
         [ h2 [] [ text "Edit Profile" ]
-        , p [ style [ ( "color", "red" ) ] ]
-            [ text (Maybe.withDefault "" model.errorMessage) ]
+        , errorMessageView model.userResponse
         , formView model.profileEdit
         ]
 
@@ -124,7 +130,7 @@ formView user =
             [ span [] [ text "Age" ]
             , input
                 [ value (toString user.age)
-                , type' "number"
+                , type_ "number"
                 , onInput (\input -> Input (Age input))
                 ]
                 []

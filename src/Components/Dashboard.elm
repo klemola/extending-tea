@@ -2,13 +2,12 @@ module Components.Dashboard exposing (..)
 
 import Html exposing (..)
 import Html.Attributes exposing (src)
-import Html.App as App
 import Html.Events exposing (onClick)
-import HttpBuilder exposing (Error)
-import Task exposing (Task)
-import Api
-import Types.Context as Context exposing (Context, ContextUpdate)
-import Types.User as User exposing (User)
+import RemoteData exposing (RemoteData(..), WebData)
+import RemoteData.Http exposing (post)
+import Types exposing (Context, ContextUpdate(..), User)
+import Decoders exposing (messageDecoder)
+import Encoders
 import Components.EditProfile as EditProfile
 
 
@@ -18,10 +17,9 @@ type View
 
 
 type Msg
-    = ContextUpdate
-    | SwitchView View
+    = SwitchView View
     | Logout
-    | HandleLogoutResponse String
+    | HandleLogoutResponse (WebData String)
     | NoOp
     | EditProfileMsg EditProfile.Msg
 
@@ -48,24 +46,26 @@ init context =
 update : Context -> Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
 update context msg model =
     case msg of
-        ContextUpdate ->
-            contextUpdate context model
-
         SwitchView view ->
             ( { model | activeView = view }, Cmd.none, Nothing )
 
         Logout ->
             ( model
-            , Task.perform (\_ -> NoOp) HandleLogoutResponse logout
+            , logout
             , Nothing
             )
 
-        HandleLogoutResponse _ ->
+        HandleLogoutResponse webData ->
             let
                 ( initialModel, intialCmd ) =
                     init context
             in
-                ( initialModel, intialCmd, Just Context.LogOut )
+                case webData of
+                    Success _ ->
+                        ( initialModel, intialCmd, Just LogOut )
+
+                    _ ->
+                        ( model, Cmd.none, Nothing )
 
         NoOp ->
             ( model, Cmd.none, Nothing )
@@ -81,26 +81,9 @@ update context msg model =
                 )
 
 
-contextUpdate : Context -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
-contextUpdate context model =
-    let
-        ( editProfileModel, editProfileCmd, _ ) =
-            EditProfile.update context EditProfile.ContextUpdate model.editProfileModel
-    in
-        ( { model
-            | editProfileModel = editProfileModel
-            , activeView = ShowProfileView
-          }
-        , Cmd.map EditProfileMsg editProfileCmd
-        , Nothing
-        )
-
-
-logout : Task (Error String) String
+logout : Cmd Msg
 logout =
-    Api.emptyValue
-        |> Api.post Api.messageDecoder "/api/logout"
-        |> Task.map .data
+    post "/api/logout" HandleLogoutResponse messageDecoder Encoders.empty
 
 
 view : Context -> Model -> Html Msg
@@ -124,7 +107,7 @@ activeView : Context -> Model -> Html Msg
 activeView context model =
     case model.activeView of
         EditProfileView ->
-            App.map EditProfileMsg (EditProfile.view model.editProfileModel)
+            Html.map EditProfileMsg (EditProfile.view model.editProfileModel)
 
         ShowProfileView ->
             showProfileView context.currentUser
