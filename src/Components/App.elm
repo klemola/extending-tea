@@ -6,8 +6,8 @@ import RemoteData exposing (RemoteData(..), WebData)
 import RemoteData.Http exposing (get)
 import Components.Dashboard as Dashboard
 import Components.Login as Login
-import Decoders exposing (userDecoder)
 import Types exposing (Context, ContextUpdate(..), User)
+import Decoders exposing (userDecoder)
 
 
 type Msg

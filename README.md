@@ -4,7 +4,7 @@
 
 I've had a chance to revise the core idea with Ossi. We improved the implementation, and you can see the results here: [ohanhi/elm-taco](https://github.com/ohanhi/elm-taco)
 
-This example is still relevant in the sense that we use different data in `elm-taco`. User state handling, back-end server and sessions are unique to this repository. I'm going to update the codebase to Elm 0.18 as soon as possible.
+This example is still relevant in the sense that we use different data in `elm-taco`. User state handling, back-end server and sessions are unique to this repository.
 
 ### Jump to...
 - **[About](#about)**
@@ -51,12 +51,11 @@ src/
 │   ├── Dashboard.elm
 │   ├── EditProfile.elm
 │   └── Login.elm
-├── Types
-│   ├── Context.elm
-│   ├── Credentials.elm
-│   └── User.elm
-├── Api.elm
-└── Main.elm
+├── Decoders.elm
+├── Encoders.elm
+├── Helpers.elm
+├── Main.elm
+└── Types.elm
 ```
 
 ```elm
@@ -64,15 +63,15 @@ src/
 ...
 import Components.Dashboard as Dashboard
 import Components.Login as Login
-import Types.User as User exposing (User)
-import Types.Context as Context exposing (Context, ContextUpdate(..))
+import Types exposing (Context, ContextUpdate(..), User)
+import Decoders exposing (userDecoder)
 ```
 
 The Elm Architecture doesn't enforce a rigid module structure. The structure of this repository is result of several iterations in a bigger project (but doesn't contain all of the module types you'd find in such project). It's fairly useful to have separate modules for types that contain type definitions and their encoders/decoders. Components also have their own namespace.
 
 ## Requirements
 
-- Elm version 0.17 or greater
+- Elm version 0.18 or greater
   - Build and start scripts require `elm-make` and `elm-package` binaries in `PATH`
 - Node version 6.0.0 or greater (may work on Node 5.x but it's not supported)
 - NPM version 3.10.0 or greater
