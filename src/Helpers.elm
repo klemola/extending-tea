@@ -26,12 +26,17 @@ formatErrorResponse error =
             "Request failed"
 
 
+errorText : String -> Html msg
+errorText content =
+    p [ style [ ( "color", "red" ) ] ]
+        [ text content ]
+
+
 errorMessageView : WebData a -> Html msg
 errorMessageView response =
     case response of
         Failure error ->
-            p [ style [ ( "color", "red" ) ] ]
-                [ text (formatErrorResponse error) ]
+            errorText (formatErrorResponse error)
 
         _ ->
             text ""

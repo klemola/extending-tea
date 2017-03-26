@@ -5,27 +5,22 @@ import Html.Attributes exposing (src)
 import Html.Events exposing (onClick)
 import RemoteData exposing (RemoteData(..), WebData)
 import RemoteData.Http exposing (post)
-import Types exposing (Context, ContextUpdate(..), User)
+import Types exposing (ActiveView(..), Context, ContextUpdate(..), User)
 import Decoders exposing (messageDecoder)
 import Encoders
 import Components.EditProfile as EditProfile
-
-
-type View
-    = EditProfileView
-    | ShowProfileView
+import Helpers exposing (errorText)
 
 
 type Msg
-    = SwitchView View
+    = SetView ActiveView
     | Logout
     | HandleLogoutResponse (WebData String)
     | EditProfileMsg EditProfile.Msg
 
 
 type alias Model =
-    { activeView : View
-    , editProfileModel : EditProfile.Model
+    { editProfileModel : EditProfile.Model
     }
 
 
@@ -35,9 +30,7 @@ init context =
         ( editProfileModel, editProfileCmd ) =
             EditProfile.init context
     in
-        ( { activeView = ShowProfileView
-          , editProfileModel = editProfileModel
-          }
+        ( { editProfileModel = editProfileModel }
         , Cmd.map EditProfileMsg editProfileCmd
         )
 
@@ -45,8 +38,8 @@ init context =
 update : Context -> Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
 update context msg model =
     case msg of
-        SwitchView view ->
-            ( { model | activeView = view }, Cmd.none, Nothing )
+        SetView view ->
+            ( model, Cmd.none, Just (ChangeView view) )
 
         Logout ->
             ( model
@@ -93,20 +86,23 @@ view context model =
 navigation : Html Msg
 navigation =
     nav []
-        [ button [ onClick (SwitchView ShowProfileView) ] [ text "View profile " ]
-        , button [ onClick (SwitchView EditProfileView) ] [ text "Edit profile " ]
+        [ button [ onClick (SetView ShowProfileView) ] [ text "View profile " ]
+        , button [ onClick (SetView EditProfileView) ] [ text "Edit profile " ]
         , button [ onClick (Logout) ] [ text "Logout " ]
         ]
 
 
 activeView : Context -> Model -> Html Msg
 activeView context model =
-    case model.activeView of
+    case context.activeView of
         EditProfileView ->
             Html.map EditProfileMsg (EditProfile.view model.editProfileModel)
 
         ShowProfileView ->
             showProfileView context.currentUser
+
+        UnauthorizedView ->
+            errorText "Unauthorized"
 
 
 showProfileView : User -> Html Msg

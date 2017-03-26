@@ -19,9 +19,17 @@ type alias Credentials =
 
 type alias Context =
     { currentUser : User
+    , activeView : ActiveView
     }
 
 
 type ContextUpdate
     = SetCurrentUser User
     | LogOut
+    | ChangeView ActiveView
+
+
+type ActiveView
+    = UnauthorizedView
+    | EditProfileView
+    | ShowProfileView

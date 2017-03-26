@@ -27,7 +27,7 @@ let userData = {
   firstName: 'Eric',
   lastName: 'Example',
   username: 'mycupoftea',
-  profilePicture: 'http://placekitten.com/400/400',
+  profilePicture: 'https://placebear.com/400/400',
   age: 30,
 };
 
