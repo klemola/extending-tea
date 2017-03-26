@@ -2,38 +2,35 @@ module Components.Login exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
 import Html.Events exposing (onClick, onInput)
-import Html.Attributes exposing (type', placeholder, style)
-import HttpBuilder exposing (Error)
-import Task exposing (Task)
-import Api
-import Types.Context as Context exposing (Context, ContextUpdate)
-import Types.User as User exposing (User)
-import Types.Credentials as Credentials exposing (Credentials)
+import Html.Attributes exposing (type_, placeholder, style)
+import RemoteData exposing (RemoteData(..), WebData)
+import RemoteData.Http exposing (post)
+import Types exposing (Context, ContextUpdate(..), Credentials, User)
+import Encoders exposing (encodeCredentials)
+import Decoders exposing (userDecoder)
+import Helpers exposing (errorMessageView)
 
 
 type Msg
     = SetUserName String
     | SetPassword String
     | Login
-    | HandleResponse User
-    | HandleFailure
+    | HandleResponse (WebData User)
 
 
 type alias Model =
     { username : String
     , password : String
-    , errorMessage : Maybe String
+    , userResponse : WebData User
     }
 
 
-init : ( Model, Cmd Msg )
+init : Model
 init =
-    ( { username = ""
-      , password = ""
-      , errorMessage = Nothing
-      }
-    , Cmd.none
-    )
+    { username = ""
+    , password = ""
+    , userResponse = NotAsked
+    }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
@@ -51,29 +48,28 @@ update msg model =
                     Credentials model.username model.password
             in
                 ( model
-                , Task.perform (\_ -> HandleFailure) HandleResponse (login credentials)
+                , login credentials
                 , Nothing
                 )
 
-        HandleResponse user ->
-            ( fst init, snd init, Just (Context.SetCurrentUser user) )
+        HandleResponse webData ->
+            case webData of
+                Success user ->
+                    ( init, Cmd.none, Just (SetCurrentUser user) )
 
-        HandleFailure ->
-            ( { model | errorMessage = Just "Login failed" }, Cmd.none, Nothing )
+                _ ->
+                    ( { model | userResponse = webData }, Cmd.none, Nothing )
 
 
-login : Credentials -> Task (Error String) User
+login : Credentials -> Cmd Msg
 login credentials =
-    Credentials.encode credentials
-        |> Api.post User.decoder "/api/login"
-        |> Task.map .data
+    post "/api/login" HandleResponse userDecoder (encodeCredentials credentials)
 
 
 view : Model -> Html Msg
 view model =
     div []
-        [ p [ style [ ( "color", "red" ) ] ]
-            [ text (Maybe.withDefault "" model.errorMessage) ]
+        [ errorMessageView model.userResponse
         , p [] [ text "Username is \"mycupoftea\" and password is \"hunter2\"" ]
         , div [] (loginForm model)
         ]
@@ -83,8 +79,8 @@ loginForm : Model -> List (Html Msg)
 loginForm model =
     let
         items =
-            [ input [ type' "text", placeholder "Name", onInput SetUserName ] []
-            , input [ type' "password", placeholder "Password", onInput SetPassword ] []
+            [ input [ type_ "text", placeholder "Name", onInput SetUserName ] []
+            , input [ type_ "password", placeholder "Password", onInput SetPassword ] []
             , button [ onClick Login ] [ text "Submit" ]
             ]
     in

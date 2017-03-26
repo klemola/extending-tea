@@ -2,21 +2,16 @@ module Components.App exposing (Model, Msg, init, update, view)
 
 import Html exposing (..)
 import Html.Attributes exposing (style)
-import Html.App
-import Task exposing (Task)
-import HttpBuilder exposing (Error)
-import Api
+import RemoteData exposing (RemoteData(..), WebData)
+import RemoteData.Http exposing (get)
 import Components.Dashboard as Dashboard
 import Components.Login as Login
-import Types.User as User exposing (User)
-import Types.Context as Context exposing (Context, ContextUpdate(..))
+import Types exposing (ActiveView(..), Context, ContextUpdate(..), User)
+import Decoders exposing (userDecoder)
 
 
 type Msg
-    = UpdateContext ContextUpdate
-    | SetUser User
-    | Unauthorized
-    | ContextUpdateFailure
+    = UserResponse (WebData User)
     | LoginMsg Login.Msg
     | DashboardMsg Dashboard.Msg
 
@@ -31,115 +26,115 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
+    ( { context = Nothing
+      , appReady = False
+      , dashboardModel = Nothing
+      , loginModel = Login.init
+      }
+    , authenticateUser
+    )
+
+
+initAuthenticated : User -> ( Model, Cmd Msg )
+initAuthenticated user =
     let
-        ( loginModel, loginCmd ) =
-            Login.init
+        context =
+            { currentUser = user
+            , activeView = ShowProfileView
+            }
+
+        ( dashboardModel, dashboardCmd ) =
+            Dashboard.init context
     in
-        ( { context = Nothing
-          , appReady = False
-          , dashboardModel = Nothing
-          , loginModel = loginModel
+        ( { context = Just context
+          , appReady = True
+          , dashboardModel = Just dashboardModel
+          , loginModel = Login.init
           }
-        , Cmd.batch
-            [ Task.perform (\_ -> Unauthorized) SetUser authenticateUser
-            , Cmd.map LoginMsg loginCmd
-            ]
+        , Cmd.map DashboardMsg dashboardCmd
         )
+
+
+authenticateUser : Cmd Msg
+authenticateUser =
+    get "/api/me" UserResponse userDecoder
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        UpdateContext contextUpdate ->
-            updateContext model contextUpdate
+        UserResponse webData ->
+            case webData of
+                Success user ->
+                    initAuthenticated user
 
-        SetUser user ->
-            updateContext model (Context.SetCurrentUser user)
-
-        Unauthorized ->
-            { model | appReady = True } ! []
-
-        ContextUpdateFailure ->
-            model ! []
+                _ ->
+                    { model | appReady = True } ! []
 
         LoginMsg msg ->
             let
-                ( loginModel, loginCmd, contextUpdate ) =
+                ( updatedModel, loginCmd, contextUpdate ) =
                     Login.update msg model.loginModel
             in
-                ( { model
-                    | loginModel = loginModel
-                  }
-                , Cmd.batch
-                    (maybeUpdateContext contextUpdate :: [ Cmd.map LoginMsg loginCmd ])
-                )
+                case contextUpdate of
+                    Just (SetCurrentUser user) ->
+                        initAuthenticated user
+
+                    _ ->
+                        ( { model | loginModel = updatedModel }, Cmd.map LoginMsg loginCmd )
 
         DashboardMsg msg ->
-            model.context
-                |> Maybe.map2 (updateDashboard model msg) model.dashboardModel
-                |> Maybe.withDefault ( model, Cmd.none )
+            case ( model.context, model.dashboardModel ) of
+                ( Just ctx, Just dbModel ) ->
+                    updateDashboard model msg dbModel ctx
 
-
-authenticateUser : Task (Error String) User
-authenticateUser =
-    Api.get User.decoder "/api/me"
-        |> Task.map .data
-
-
-maybeUpdateContext : Maybe ContextUpdate -> Cmd Msg
-maybeUpdateContext contextUpdate =
-    case contextUpdate of
-        Just update ->
-            Task.succeed ()
-                |> Task.perform (\_ -> ContextUpdateFailure) (\_ -> UpdateContext update)
-
-        Nothing ->
-            Cmd.none
+                _ ->
+                    ( model, Cmd.none )
 
 
 updateDashboard : Model -> Dashboard.Msg -> Dashboard.Model -> Context -> ( Model, Cmd Msg )
-updateDashboard model dashboardMsg currentModel context =
+updateDashboard model dashboardMsg dashboardModel context =
     let
-        ( dashboardModel, dashboardCmd, contextUpdate ) =
-            Dashboard.update context dashboardMsg currentModel
+        ( updatedModel, dashboardCmd, contextUpdate ) =
+            Dashboard.update context dashboardMsg dashboardModel
+
+        changeUserInContext user =
+            model.context
+                |> Maybe.map
+                    (\ctx ->
+                        { ctx
+                            | currentUser = user
+                            , activeView = ShowProfileView
+                        }
+                    )
+
+        changeViewInContext view =
+            model.context
+                |> Maybe.map (\ctx -> { ctx | activeView = view })
     in
-        ( { model
-            | dashboardModel = Just dashboardModel
-          }
-        , Cmd.batch
-            (maybeUpdateContext contextUpdate :: [ Cmd.map DashboardMsg dashboardCmd ])
-        )
-
-
-updateContext : Model -> ContextUpdate -> ( Model, Cmd Msg )
-updateContext model contextUpdate =
-    case contextUpdate of
-        SetCurrentUser user ->
-            let
-                context =
-                    { currentUser = user }
-
-                updateDashboard currentModel _ =
-                    Dashboard.update context Dashboard.ContextUpdate currentModel
-
-                initWithCtxUpdate initValues update =
-                    ( fst initValues, snd initValues, update )
-
-                ( dashboardModel, dashboardCmd, ctxUpdate ) =
-                    model.context
-                        |> Maybe.map2 updateDashboard model.dashboardModel
-                        |> Maybe.withDefault (initWithCtxUpdate (Dashboard.init context) ctxUpdate)
-            in
+        case contextUpdate of
+            Just (SetCurrentUser user) ->
                 ( { model
-                    | context = Just context
+                    | context = changeUserInContext user
                     , appReady = True
-                    , dashboardModel = Just dashboardModel
+                    , dashboardModel = Just updatedModel
                   }
                 , Cmd.map DashboardMsg dashboardCmd
                 )
 
-        LogOut ->
-            init
+            Just LogOut ->
+                init
+
+            Just (ChangeView view) ->
+                ( { model
+                    | context = changeViewInContext view
+                    , dashboardModel = Just updatedModel
+                  }
+                , Cmd.map DashboardMsg dashboardCmd
+                )
+
+            Nothing ->
+                ( { model | dashboardModel = Just updatedModel }, Cmd.map DashboardMsg dashboardCmd )
 
 
 view : Model -> Html Msg
@@ -159,14 +154,9 @@ view model =
 
 activeView : Model -> Html Msg
 activeView model =
-    case model.context of
-        Just context ->
-            case model.dashboardModel of
-                Just dashboardModel ->
-                    Html.App.map DashboardMsg (Dashboard.view context dashboardModel)
+    case ( model.context, model.dashboardModel ) of
+        ( Just ctx, Just dbModel ) ->
+            Html.map DashboardMsg (Dashboard.view ctx dbModel)
 
-                Nothing ->
-                    Debug.crash "Should not be possible"
-
-        Nothing ->
-            Html.App.map LoginMsg (Login.view model.loginModel)
+        _ ->
+            Html.map LoginMsg (Login.view model.loginModel)
