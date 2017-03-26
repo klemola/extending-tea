@@ -20,7 +20,6 @@ type Msg
     = SwitchView View
     | Logout
     | HandleLogoutResponse (WebData String)
-    | NoOp
     | EditProfileMsg EditProfile.Msg
 
 
@@ -66,9 +65,6 @@ update context msg model =
 
                     _ ->
                         ( model, Cmd.none, Nothing )
-
-        NoOp ->
-            ( model, Cmd.none, Nothing )
 
         EditProfileMsg editProfileMsg ->
             let

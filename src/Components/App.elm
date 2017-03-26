@@ -26,20 +26,36 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
+    ( { context = Nothing
+      , appReady = False
+      , dashboardModel = Nothing
+      , loginModel = Login.init
+      }
+    , authenticateUser
+    )
+
+
+initAuthenticated : User -> ( Model, Cmd Msg )
+initAuthenticated user =
     let
-        ( loginModel, loginCmd ) =
-            Login.init
+        context =
+            { currentUser = user }
+
+        ( dashboardModel, dashboardCmd ) =
+            Dashboard.init context
     in
-        ( { context = Nothing
-          , appReady = False
-          , dashboardModel = Nothing
-          , loginModel = loginModel
+        ( { context = Just context
+          , appReady = True
+          , dashboardModel = Just dashboardModel
+          , loginModel = Login.init
           }
-        , Cmd.batch
-            [ authenticateUser
-            , Cmd.map LoginMsg loginCmd
-            ]
+        , Cmd.map DashboardMsg dashboardCmd
         )
+
+
+authenticateUser : Cmd Msg
+authenticateUser =
+    get "/api/me" UserResponse userDecoder
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -48,7 +64,7 @@ update msg model =
         UserResponse webData ->
             case webData of
                 Success user ->
-                    updateContext model (SetCurrentUser user)
+                    initAuthenticated user
 
                 _ ->
                     { model | appReady = True } ! []
@@ -59,21 +75,16 @@ update msg model =
                     Login.update msg model.loginModel
             in
                 case contextUpdate of
-                    Just cu ->
-                        updateContext { model | loginModel = updatedModel } cu
+                    Just (SetCurrentUser user) ->
+                        initAuthenticated user
 
-                    Nothing ->
+                    _ ->
                         ( { model | loginModel = updatedModel }, Cmd.map LoginMsg loginCmd )
 
         DashboardMsg msg ->
             model.context
                 |> Maybe.map2 (updateDashboard model msg) model.dashboardModel
                 |> Maybe.withDefault ( model, Cmd.none )
-
-
-authenticateUser : Cmd Msg
-authenticateUser =
-    get "/api/me" UserResponse userDecoder
 
 
 updateDashboard : Model -> Dashboard.Msg -> Dashboard.Model -> Context -> ( Model, Cmd Msg )
@@ -83,34 +94,20 @@ updateDashboard model dashboardMsg dashboardModel context =
             Dashboard.update context dashboardMsg dashboardModel
     in
         case contextUpdate of
-            Just cu ->
-                updateContext { model | dashboardModel = Just updatedModel } cu
+            Just (SetCurrentUser user) ->
+                ( { model
+                    | context = Just { currentUser = user }
+                    , appReady = True
+                    , dashboardModel = Just updatedModel
+                  }
+                , Cmd.map DashboardMsg dashboardCmd
+                )
+
+            Just LogOut ->
+                init
 
             Nothing ->
                 ( { model | dashboardModel = Just updatedModel }, Cmd.map DashboardMsg dashboardCmd )
-
-
-updateContext : Model -> ContextUpdate -> ( Model, Cmd Msg )
-updateContext model contextUpdate =
-    case contextUpdate of
-        SetCurrentUser user ->
-            let
-                context =
-                    { currentUser = user }
-
-                ( dashboardModel, dashboardMsg ) =
-                    Dashboard.init context
-            in
-                ( { model
-                    | context = Just context
-                    , appReady = True
-                    , dashboardModel = Just dashboardModel
-                  }
-                , Cmd.map DashboardMsg dashboardMsg
-                )
-
-        LogOut ->
-            init
 
 
 view : Model -> Html Msg

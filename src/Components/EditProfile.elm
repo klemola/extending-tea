@@ -13,8 +13,7 @@ import Helpers exposing (errorMessageView)
 
 
 type Msg
-    = ContextUpdate
-    | Input FormUpdate
+    = Input FormUpdate
     | Submit
     | HandleResponse (WebData User)
 
@@ -43,12 +42,6 @@ init context =
 update : Context -> Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
 update context msg model =
     case msg of
-        ContextUpdate ->
-            ( { model | profileEdit = context.currentUser }
-            , Cmd.none
-            , Nothing
-            )
-
         Input formUpdate ->
             ( { model | profileEdit = updateUser model.profileEdit formUpdate }
             , Cmd.none
@@ -62,22 +55,21 @@ update context msg model =
             )
 
         HandleResponse webData ->
-            let
-                updatedModel =
-                    { model | userResponse = webData }
-            in
-                case webData of
-                    Success user ->
-                        ( updatedModel
-                        , Cmd.none
-                        , Just (SetCurrentUser user)
-                        )
+            case webData of
+                Success user ->
+                    ( { model
+                        | userResponse = webData
+                        , profileEdit = user
+                      }
+                    , Cmd.none
+                    , Just (SetCurrentUser user)
+                    )
 
-                    _ ->
-                        ( updatedModel
-                        , Cmd.none
-                        , Nothing
-                        )
+                _ ->
+                    ( { model | userResponse = webData }
+                    , Cmd.none
+                    , Nothing
+                    )
 
 
 submit : User -> Cmd Msg

@@ -25,14 +25,12 @@ type alias Model =
     }
 
 
-init : ( Model, Cmd Msg )
+init : Model
 init =
-    ( { username = ""
-      , password = ""
-      , userResponse = NotAsked
-      }
-    , Cmd.none
-    )
+    { username = ""
+    , password = ""
+    , userResponse = NotAsked
+    }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg, Maybe ContextUpdate )
@@ -57,7 +55,7 @@ update msg model =
         HandleResponse webData ->
             case webData of
                 Success user ->
-                    ( Tuple.first init, Tuple.second init, Just (SetCurrentUser user) )
+                    ( init, Cmd.none, Just (SetCurrentUser user) )
 
                 _ ->
                     ( { model | userResponse = webData }, Cmd.none, Nothing )
